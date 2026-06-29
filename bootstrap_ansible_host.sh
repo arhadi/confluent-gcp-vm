@@ -215,7 +215,7 @@ git-lfs \
 htop \
 iftop \
 iotop \
-tcpdump 
+tcpdump
 
 ok "Base packages installed."
 
