@@ -28,6 +28,8 @@
 ###############################################################################
 
 TERRAFORM_VERSION="1.13.0"
+CONFLUENT_VERSION="8.2.x"
+CP_ANSIBLE_BRANCH="${CONFLUENT_VERSION}"
 
 ###############################################################################
 
@@ -241,6 +243,7 @@ https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
 
     ok "yq installed."
 
+    command -v yq >/dev/null || fail "yq installation failed."
 fi
 
 ###############################################################################
@@ -414,6 +417,9 @@ else
    
     export PATH="$HOME/.local/bin:$PATH"
 
+    command -v pipx >/dev/null || fail "pipx installation failed."
+    
+    python3 --version >/dev/null || fail "Python installation failed."
 fi
 
 ###############################################################################
@@ -521,6 +527,8 @@ chmod -R u+rwX "$PLATFORM_HOME"
 git config --global init.defaultBranch main
 git config --global pull.rebase false
 git config --global core.autocrlf input
+
+git --version >/dev/null || fail "Git installation failed."
 
 ###############################################################################
 # CLEANUP
