@@ -27,7 +27,6 @@
 ###############################################################################
 
 TERRAFORM_VERSION="1.13.0"
-CONFLUENT_VERSION="8.2.x"
 ANSIBLE_VERSION="latest"
 GCLOUD_VERSION="latest"
 
@@ -482,8 +481,6 @@ fi
 ###############################################################################
 # Clone cp-ansible
 ###############################################################################
-
-CONFLUENT_VERSION="8.2.x"
 
 CP_ANSIBLE_HOME="${CONFLUENT_HOME}/cp-ansible-${CONFLUENT_VERSION}"
 
