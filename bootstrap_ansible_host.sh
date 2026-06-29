@@ -30,7 +30,6 @@ TERRAFORM_VERSION="1.13.0"
 CONFLUENT_VERSION="8.2.x"
 ANSIBLE_VERSION="latest"
 GCLOUD_VERSION="latest"
-CP_ANSIBLE_BRANCH="${CONFLUENT_VERSION}"
 
 ###############################################################################
 
@@ -372,7 +371,7 @@ else
 
     cd "$TMP_DIR"
 
-    wget -q https://releases.hashicorp.com/terraform/${TERRAFORM_VERSION}/terraform_${TERRAFORM_VERSION}_linux_amd64.zip
+    wget -q --show-progress https://releases.hashicorp.com/terraform/${TERRAFORM_VERSION}/terraform_${TERRAFORM_VERSION}_linux_amd64.zip
 
     rm -f terraform
     
@@ -533,47 +532,51 @@ sudo apt clean
 # SUMMARY
 ###############################################################################
 
-==============================================================
-Platform Engineering Bootstrap v1.0
-==============================================================
-
-Platform Workspace
-------------------
-/app/platform
-
-Installed Components
---------------------
-✔ Git
-✔ Python
-✔ Terraform
-✔ Ansible
-✔ Google Cloud CLI
-✔ jq
-✔ yq
-✔ cp-ansible (8.2.x)
-
-cp-ansible
------------
-/app/platform/confluent/current
-
-SSH Key
--------
-~/.ssh/id_ed25519
-
-Bootstrap Log
--------------
-/var/log/platform-bootstrap.log
-
-Next Steps
-----------
-1. source ~/.bashrc
-2. gcloud auth login
-3. gcloud config set project <PROJECT_ID>
-4. cd /app/platform
-
-==============================================================
-Bootstrap completed successfully.
-==============================================================
+echo
+echo "=============================================================="
+echo "Platform Engineering Bootstrap v1.0"
+echo "=============================================================="
 
 echo
+echo "Platform Workspace"
+echo "------------------"
+echo "$PLATFORM_HOME"
+
+echo
+echo "Installed Components"
+echo "--------------------"
+echo "✔ Git"
+echo "✔ Python"
+echo "✔ Terraform"
+echo "✔ Ansible"
+echo "✔ Google Cloud CLI"
+echo "✔ jq"
+echo "✔ yq"
+echo "✔ cp-ansible (${CONFLUENT_VERSION})"
+
+echo
+echo "cp-ansible"
+echo "-----------"
+echo "${CONFLUENT_HOME}/current"
+
+echo
+echo "SSH Key"
+echo "-------"
+echo "~/.ssh/id_ed25519"
+
+echo
+echo "Bootstrap Log"
+echo "-------------"
+echo "$BOOTSTRAP_LOG"
+
+echo
+echo "Next Steps"
+echo "----------"
+echo "1. source ~/.bashrc"
+echo "2. gcloud auth login"
+echo "3. gcloud config set project <PROJECT_ID>"
+echo "4. cd $PLATFORM_HOME"
+
+echo
+echo "=============================================================="
 ok "Bootstrap completed successfully."
