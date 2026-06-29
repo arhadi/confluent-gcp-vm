@@ -397,7 +397,11 @@ else
 
     sudo chmod +x /usr/local/bin/terraform
 
-    rm -rf "$TMP_DIR"
+    cleanup_tmp() {
+        [[ -d "$TMP_DIR" ]] && rm -rf "$TMP_DIR"
+    }
+
+    trap cleanup_tmp EXIT
 
     terraform version >/dev/null \
     || fail "Terraform installation failed."
@@ -522,11 +526,11 @@ else
 
     info "Downloading cp-ansible..."
 
-git clone \
-    --depth 1 \
-    -b "$CP_ANSIBLE_BRANCH" \
-    https://github.com/confluentinc/cp-ansible.git \
-    "$CP_ANSIBLE_HOME"
+    git clone \
+        --depth 1 \
+        -b "$CP_ANSIBLE_BRANCH" \
+        https://github.com/confluentinc/cp-ansible.git \
+        "$CP_ANSIBLE_HOME"
 
 fi
 
