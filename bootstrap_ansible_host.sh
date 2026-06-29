@@ -23,9 +23,22 @@
 #   - Platform directory structure
 #
 ###############################################################################
+# Versions
+###############################################################################
+
+TERRAFORM_VERSION="1.13.0"
+ANSIBLE_VERSION="latest"
+GCLOUD_VERSION="latest"
+CP_ANSIBLE_BRANCH="8.2.x"
+###############################################################################
 
 set -euo pipefail
 
+###############################################################################
+# Error Handling
+###############################################################################
+
+trap 'echo; fail "Bootstrap failed at line $LINENO"' ERR
 ###############################################################################
 # VARIABLES
 ###############################################################################
@@ -46,7 +59,9 @@ ARTIFACT_HOME="${PLATFORM_HOME}/artifacts"
 
 SSH_HOME="${PLATFORM_HOME}/ssh"
 
-LOG_FILE="/tmp/bootstrap_ansible_host.log"
+BOOTSTRAP_LOG="/var/log/platform-bootstrap.log"
+sudo touch "$BOOTSTRAP_LOG"
+sudo chmod 644 "$BOOTSTRAP_LOG"
 
 ###############################################################################
 # COLOURS
@@ -140,9 +155,10 @@ ok "Ubuntu ${VERSION_ID} detected."
 
 info "Updating operating system..."
 
-sudo apt update
+sudo apt-get update
 
-sudo apt -y upgrade
+sudo DEBIAN_FRONTEND=noninteractive \
+apt-get -y dist-upgrade
 
 ###############################################################################
 # INSTALL BASE PACKAGES
@@ -287,6 +303,133 @@ then
 cat <<EOF >> ~/.bashrc
 
 ###############################################################################
+# Install Terraform
+###############################################################################
+
+if command -v terraform >/dev/null
+
+then
+
+    ok "Terraform already installed."
+
+else
+
+    info "Installing Terraform ${TERRAFORM_VERSION}..."
+
+    cd /tmp
+
+    wget -q \
+https://releases.hashicorp.com/terraform/${TERRAFORM_VERSION}/terraform_${TERRAFORM_VERSION}_linux_amd64.zip
+
+    unzip -oq terraform_${TERRAFORM_VERSION}_linux_amd64.zip
+
+    sudo mv terraform /usr/local/bin/
+
+    sudo chmod +x /usr/local/bin/terraform
+
+    rm terraform_${TERRAFORM_VERSION}_linux_amd64.zip
+
+    ok "Terraform installed."
+
+fi
+
+###############################################################################
+# Install pipx
+###############################################################################
+
+if command -v pipx >/dev/null
+
+then
+
+    ok "pipx already installed."
+
+else
+
+    info "Installing pipx..."
+
+    sudo apt-get install -y pipx
+
+    pipx ensurepath
+
+fi
+
+###############################################################################
+# Install Ansible
+###############################################################################
+
+if command -v ansible >/dev/null
+
+then
+
+    ok "Ansible already installed."
+
+else
+
+    info "Installing Ansible..."
+
+    pipx install ansible
+
+    pipx install ansible-lint
+
+    ok "Ansible installed."
+
+fi
+###############################################################################
+# Install Google Cloud CLI
+###############################################################################
+
+if command -v gcloud >/dev/null
+
+then
+
+    ok "Google Cloud CLI already installed."
+
+else
+
+    info "Installing Google Cloud CLI..."
+
+    curl -fsSL \
+https://packages.cloud.google.com/apt/doc/apt-key.gpg \
+| sudo gpg --dearmor \
+-o /usr/share/keyrings/cloud.google.gpg
+
+    echo \
+"deb [signed-by=/usr/share/keyrings/cloud.google.gpg] http://packages.cloud.google.com/apt cloud-sdk main" \
+| sudo tee /etc/apt/sources.list.d/google-cloud-sdk.list >/dev/null
+
+    sudo apt-get update
+
+    sudo apt-get install -y google-cloud-cli
+
+    ok "Google Cloud CLI installed."
+
+fi
+
+###############################################################################
+# Clone cp-ansible
+###############################################################################
+
+CP_ANSIBLE_HOME="${CONFLUENT_HOME}/cp-ansible"
+
+if [[ -d "$CP_ANSIBLE_HOME/.git" ]]
+
+then
+
+    info "Updating cp-ansible..."
+
+    git -C "$CP_ANSIBLE_HOME" pull
+
+else
+
+    info "Downloading cp-ansible..."
+
+    git clone \
+-b "$CP_ANSIBLE_BRANCH" \
+https://github.com/confluentinc/cp-ansible.git \
+"$CP_ANSIBLE_HOME"
+
+fi
+###############################################################################
 # Platform Engineering
 ###############################################################################
 
@@ -307,56 +450,25 @@ fi
 
 echo
 echo "====================================================="
-echo " Platform Engineering Bootstrap v1.0"
+echo "Platform Engineering Bootstrap"
 echo "====================================================="
-echo
 
-echo "Workspace"
-
-echo "-------------------------------------"
-
-echo "$PLATFORM_HOME"
-
-echo
-
-echo "Git"
-
-git --version
+printf "%-20s %s\n" "Workspace" "$PLATFORM_HOME"
+printf "%-20s %s\n" "Git" "$(git --version)"
+printf "%-20s %s\n" "Terraform" "$(terraform version | head -1)"
+printf "%-20s %s\n" "Python" "$(python3 --version)"
+printf "%-20s %s\n" "Ansible" "$(ansible --version | head -1)"
+printf "%-20s %s\n" "gcloud" "$(gcloud version | head -1)"
+printf "%-20s %s\n" "jq" "$(jq --version)"
+printf "%-20s %s\n" "yq" "$(yq --version)"
 
 echo
-
-echo "Python"
-
-python3 --version
+echo "Platform workspace:"
+echo "  $PLATFORM_HOME"
 
 echo
-
-echo "jq"
-
-jq --version
-
-echo
-
-echo "yq"
-
-yq --version
-
-echo
-
-echo "SSH Public Key"
-
+echo "SSH public key:"
 cat ~/.ssh/id_ed25519.pub
 
 echo
-
-echo "Next Steps"
-
-echo "-------------------------------------"
-
-echo "source ~/.bashrc"
-
-echo "cd /app/platform"
-
-echo
-
 ok "Bootstrap completed successfully."
