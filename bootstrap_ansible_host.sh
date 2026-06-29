@@ -61,8 +61,7 @@ LOG_HOME="${PLATFORM_HOME}/logs"
 ARTIFACT_HOME="${PLATFORM_HOME}/artifacts"
 
 SSH_HOME="${PLATFORM_HOME}/ssh"
-
-BOOTSTRAP_LOG="/var/log/platform-bootstrap.log"
+BOOTSTRAP_LOG="$HOME/bootstrap_ansible_host.log"
 ###############################################################################
 # COLOURS
 ###############################################################################
