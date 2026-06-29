@@ -28,7 +28,7 @@
 ###############################################################################
 
 TERRAFORM_VERSION="1.13.0"
-CONFLUENT_VERSION="8.2.x"
+CONFLUENT_VERSION="8.3"
 CP_ANSIBLE_BRANCH="${CONFLUENT_VERSION}"
 
 ###############################################################################
@@ -134,7 +134,7 @@ sudo -v || fail "Sudo privilege required."
 ok "Sudo validated."
 
 ###############################################################################
-# CREATE BOOTSTARTP LOGO
+# CREATE BOOTSTRAP LOG
 ###############################################################################
 
 sudo install -o root -g root -m 0644 /dev/null "$BOOTSTRAP_LOG"
@@ -165,8 +165,14 @@ ok "Ubuntu ${VERSION_ID} detected."
 
 info "Checking Internet connectivity..."
 
-curl -fsSL https://github.com >/dev/null \
-    || fail "Unable to reach github.com"
+check_url() {
+    curl -fsSL --connect-timeout 10 "$1" >/dev/null \
+        || fail "Cannot reach $1"
+}
+
+check_url https://github.com
+check_url https://releases.hashicorp.com
+check_url https://packages.cloud.google.com
 
 ok "Internet connectivity verified."
 
@@ -219,6 +225,12 @@ htop \
 iftop \
 iotop \
 tcpdump
+
+git --version >/dev/null || fail "Git installation failed."
+
+python3 --version >/dev/null || fail "Python installation failed."
+
+command -v jq >/dev/null || fail "jq installation failed."
 
 ok "Base packages installed."
 
@@ -420,7 +432,6 @@ else
    
     export PATH="$HOME/.local/bin:$PATH"
     
-    python3 --version >/dev/null || fail "Python installation failed."
 fi
 
 ###############################################################################
@@ -454,6 +465,9 @@ ansible-galaxy collection list | grep -q "community.general" || \
 ansible-galaxy collection list | grep -q "ansible.posix" || \
     ansible-galaxy collection install ansible.posix
 
+ansible-galaxy --version >/dev/null \
+    || fail "ansible-galaxy not found."
+    
 ###############################################################################
 # Install Google Cloud CLI
 ###############################################################################
@@ -529,6 +543,7 @@ git config --global init.defaultBranch main
 git config --global pull.rebase false
 git config --global core.autocrlf input
 git lfs install --skip-repo >/dev/null 2>&1 || true
+git lfs version >/dev/null || fail "Git LFS installation failed."
 
 ###############################################################################
 # CLEANUP
