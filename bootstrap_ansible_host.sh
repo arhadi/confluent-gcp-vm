@@ -1,3 +1,4 @@
+# shellcheck shell=bash
 #!/usr/bin/env bash
 ###############################################################################
 #
@@ -27,8 +28,6 @@
 ###############################################################################
 
 TERRAFORM_VERSION="1.13.0"
-ANSIBLE_VERSION="latest"
-GCLOUD_VERSION="latest"
 
 ###############################################################################
 
@@ -42,6 +41,8 @@ trap 'echo; fail "Bootstrap failed at line $LINENO"' ERR
 ###############################################################################
 # VARIABLES
 ###############################################################################
+
+START_TIME=$(date +%s)
 
 PLATFORM_HOME="/app/platform"
 
@@ -385,6 +386,8 @@ else
     terraform version >/dev/null \
     || fail "Terraform installation failed."
 
+    terraform -install-autocomplete >/dev/null 2>&1 || true
+
     ok "Terraform installed."
 
 fi
@@ -510,6 +513,9 @@ ln -sfn \
 "$CP_ANSIBLE_HOME" \
 "${CONFLUENT_HOME}/current"
 
+[[ -d "$CP_ANSIBLE_HOME" ]] || \
+    fail "cp-ansible installation failed."
+    
 chmod -R u+rwX "$PLATFORM_HOME"
 
 git config --global init.defaultBranch main
@@ -540,16 +546,16 @@ echo "------------------"
 echo "$PLATFORM_HOME"
 
 echo
-echo "Installed Components"
-echo "--------------------"
-echo "✔ Git"
-echo "✔ Python"
-echo "✔ Terraform"
-echo "✔ Ansible"
-echo "✔ Google Cloud CLI"
-echo "✔ jq"
-echo "✔ yq"
-echo "✔ cp-ansible (${CONFLUENT_VERSION})"
+echo "Installed Versions"
+echo "------------------"
+
+terraform version | head -1
+ansible --version | head -1
+gcloud version | head -1
+python3 --version
+git --version
+jq --version
+yq --version
 
 echo
 echo "cp-ansible"
@@ -560,6 +566,11 @@ echo
 echo "SSH Key"
 echo "-------"
 echo "~/.ssh/id_ed25519"
+
+echo
+echo "SSH Public Key"
+echo "--------------"
+cat ~/.ssh/id_ed25519.pub
 
 echo
 echo "Bootstrap Log"
@@ -573,6 +584,13 @@ echo "1. source ~/.bashrc"
 echo "2. gcloud auth login"
 echo "3. gcloud config set project <PROJECT_ID>"
 echo "4. cd $PLATFORM_HOME"
+
+END_TIME=$(date +%s)
+
+echo
+echo "Execution Time"
+echo "--------------"
+echo "$((END_TIME-START_TIME)) seconds"
 
 echo
 echo "=============================================================="
