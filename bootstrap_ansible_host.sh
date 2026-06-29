@@ -60,9 +60,6 @@ ARTIFACT_HOME="${PLATFORM_HOME}/artifacts"
 SSH_HOME="${PLATFORM_HOME}/ssh"
 
 BOOTSTRAP_LOG="/var/log/platform-bootstrap.log"
-sudo touch "$BOOTSTRAP_LOG"
-sudo chmod 644 "$BOOTSTRAP_LOG"
-
 ###############################################################################
 # COLOURS
 ###############################################################################
@@ -75,7 +72,7 @@ NC='\033[0m'
 
 log() {
 
-    echo "$(date '+%F %T') $1" >> "$LOG_FILE"
+    echo "$(date '+%F %T') $1" >> "$BOOTSTRAP_LOG"
 
 }
 
@@ -130,6 +127,13 @@ fi
 sudo -v
 
 ###############################################################################
+# CREATE BOOTSTARTP LOGO
+###############################################################################
+
+sudo touch "$BOOTSTRAP_LOG"
+sudo chmod 644 "$BOOTSTRAP_LOG"
+
+###############################################################################
 # CHECK OS
 ###############################################################################
 
@@ -157,8 +161,9 @@ info "Updating operating system..."
 
 sudo apt-get update
 
-sudo DEBIAN_FRONTEND=noninteractive \
-apt-get -y dist-upgrade
+sudo DEBIAN_FRONTEND=noninteractive apt-get -y dist-upgrade
+
+curl -Is https://github.com >/dev/null || fail "Internet connection unavailable."
 
 ###############################################################################
 # INSTALL BASE PACKAGES
@@ -186,7 +191,14 @@ software-properties-common \
 apt-transport-https \
 ca-certificates \
 gnupg \
-lsb-release
+lsb-release \
+bash-completion \
+net-tools \
+dnsutils \
+telnet \
+nmap \
+rsync \
+ncdu
 
 ok "Base packages installed."
 
@@ -245,8 +257,6 @@ modules,
 environments
 }
 
-mkdir -p "$CONFLUENT_HOME"
-
 mkdir -p "$KUBERNETES_HOME"
 
 mkdir -p "$MONITORING_HOME"
@@ -262,6 +272,12 @@ mkdir -p "$LOG_HOME"
 mkdir -p "$ARTIFACT_HOME"
 
 mkdir -p "$SSH_HOME"
+
+mkdir -p "$CONFLUENT_HOME"/{
+playbooks,
+inventory,
+downloads
+}
 
 ok "Directory structure created."
 
@@ -303,6 +319,21 @@ then
 cat <<EOF >> ~/.bashrc
 
 ###############################################################################
+# Platform Engineering
+###############################################################################
+
+export PLATFORM_HOME=/app/platform
+export ANSIBLE_HOME=/app/platform/ansible
+export TERRAFORM_HOME=/app/platform/terraform
+export CONFLUENT_HOME=/app/platform/confluent
+export KUBERNETES_HOME=/app/platform/kubernetes
+export MONITORING_HOME=/app/platform/monitoring
+
+export PATH=\$HOME/.local/bin:\$PATH
+
+EOF
+
+###############################################################################
 # Install Terraform
 ###############################################################################
 
@@ -318,16 +349,19 @@ else
 
     cd /tmp
 
-    wget -q \
-https://releases.hashicorp.com/terraform/${TERRAFORM_VERSION}/terraform_${TERRAFORM_VERSION}_linux_amd64.zip
+    wget -q https://releases.hashicorp.com/terraform/${TERRAFORM_VERSION}/terraform_${TERRAFORM_VERSION}_linux_amd64.zip
 
+    rm -f terraform
+    
     unzip -oq terraform_${TERRAFORM_VERSION}_linux_amd64.zip
 
     sudo mv terraform /usr/local/bin/
 
     sudo chmod +x /usr/local/bin/terraform
 
-    rm terraform_${TERRAFORM_VERSION}_linux_amd64.zip
+    rm -f terraform_*.zip
+
+    terraform -install-autocomplete
 
     ok "Terraform installed."
 
@@ -350,6 +384,8 @@ else
     sudo apt-get install -y pipx
 
     pipx ensurepath
+   
+    export PATH="$HOME/.local/bin:$PATH"
 
 fi
 
@@ -401,6 +437,8 @@ https://packages.cloud.google.com/apt/doc/apt-key.gpg \
 
     sudo apt-get install -y google-cloud-cli
 
+    gcloud components update
+
     ok "Google Cloud CLI installed."
 
 fi
@@ -423,10 +461,9 @@ else
 
     info "Downloading cp-ansible..."
 
-    git clone \
--b "$CP_ANSIBLE_BRANCH" \
-https://github.com/confluentinc/cp-ansible.git \
-"$CP_ANSIBLE_HOME"
+    git clone -b "$CP_ANSIBLE_BRANCH" https://github.com/confluentinc/cp-ansible.git "$CP_ANSIBLE_HOME"
+
+    git config --global init.defaultBranch main
 
 fi
 ###############################################################################
