@@ -1,91 +1,151 @@
 #!/usr/bin/env bash
 ###############################################################################
+#
 # bootstrap_ansible_host.sh
 #
 # Platform Engineering Lab Bootstrap
 #
-# Purpose:
-#   Bootstrap Ubuntu 24.04 LTS Minimal as an Automation Host
+# Purpose
+#   Bootstrap Ubuntu 24.04 LTS Minimal as the Platform Engineering host.
 #
-# Components Installed
+# Version
+#   1.0
+#
+# Components
+#   - Ubuntu validation
+#   - System update
+#   - Common packages
 #   - Git
-#   - Terraform
-#   - Ansible
 #   - Python3
-#   - pip
-#   - GCP CLI
 #   - jq
 #   - yq
-#   - unzip
-#   - curl
-#   - wget
-#   - tree
-#   - make
-#   - ssh key
-#   - cp-ansible
+#   - SSH key
+#   - Platform directory structure
 #
-# Author : Arif Lab
-# Version: 1.0
 ###############################################################################
 
 set -euo pipefail
 
 ###############################################################################
-# Variables
+# VARIABLES
 ###############################################################################
 
-LAB_HOME="$HOME/lab"
-CP_ANSIBLE_DIR="$LAB_HOME/cp-ansible"
-SSH_DIR="$HOME/.ssh"
+PLATFORM_HOME="/app/platform"
 
-TERRAFORM_VERSION="1.13.0"
+ANSIBLE_HOME="${PLATFORM_HOME}/ansible"
+TERRAFORM_HOME="${PLATFORM_HOME}/terraform"
+CONFLUENT_HOME="${PLATFORM_HOME}/confluent"
+KUBERNETES_HOME="${PLATFORM_HOME}/kubernetes"
+MONITORING_HOME="${PLATFORM_HOME}/monitoring"
+
+SCRIPT_HOME="${PLATFORM_HOME}/scripts"
+DOC_HOME="${PLATFORM_HOME}/docs"
+DOWNLOAD_HOME="${PLATFORM_HOME}/downloads"
+LOG_HOME="${PLATFORM_HOME}/logs"
+ARTIFACT_HOME="${PLATFORM_HOME}/artifacts"
+
+SSH_HOME="${PLATFORM_HOME}/ssh"
+
+LOG_FILE="/tmp/bootstrap_ansible_host.log"
 
 ###############################################################################
-# Colors
+# COLOURS
 ###############################################################################
 
-RED="\033[31m"
-GREEN="\033[32m"
-YELLOW="\033[33m"
-BLUE="\033[34m"
-RESET="\033[0m"
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+NC='\033[0m'
+
+log() {
+
+    echo "$(date '+%F %T') $1" >> "$LOG_FILE"
+
+}
 
 info() {
-    echo -e "${BLUE}[INFO]${RESET} $1"
+
+    echo -e "${BLUE}[INFO]${NC} $1"
+
+    log "[INFO] $1"
+
 }
 
 ok() {
-    echo -e "${GREEN}[ OK ]${RESET} $1"
+
+    echo -e "${GREEN}[ OK ]${NC} $1"
+
+    log "[ OK ] $1"
+
 }
 
 warn() {
-    echo -e "${YELLOW}[WARN]${RESET} $1"
+
+    echo -e "${YELLOW}[WARN]${NC} $1"
+
+    log "[WARN] $1"
+
 }
 
-err() {
-    echo -e "${RED}[FAIL]${RESET} $1"
+fail() {
+
+    echo -e "${RED}[FAIL]${NC} $1"
+
+    log "[FAIL] $1"
+
+    exit 1
+
 }
 
 ###############################################################################
-# Root Check
+# CHECK USER
 ###############################################################################
 
 if [[ $EUID -eq 0 ]]; then
-    err "Do NOT run as root."
-    exit 1
+
+    fail "Please run as ubuntu user, not root."
+
 fi
 
 ###############################################################################
-# Update OS
+# CHECK SUDO
 ###############################################################################
 
-info "Updating Ubuntu..."
+sudo -v
+
+###############################################################################
+# CHECK OS
+###############################################################################
+
+source /etc/os-release
+
+if [[ "$ID" != "ubuntu" ]]; then
+
+    fail "Only Ubuntu is supported."
+
+fi
+
+if [[ "$VERSION_ID" != "24.04" ]]; then
+
+    warn "Tested on Ubuntu 24.04."
+
+fi
+
+ok "Ubuntu ${VERSION_ID} detected."
+
+###############################################################################
+# UPDATE
+###############################################################################
+
+info "Updating operating system..."
 
 sudo apt update
+
 sudo apt -y upgrade
 
 ###############################################################################
-# Install Base Packages
+# INSTALL BASE PACKAGES
 ###############################################################################
 
 info "Installing packages..."
@@ -94,30 +154,38 @@ sudo apt install -y \
 git \
 curl \
 wget \
-jq \
-unzip \
 zip \
+unzip \
+jq \
 tree \
 make \
+vim \
+nano \
 python3 \
 python3-pip \
 python3-venv \
 python3-dev \
 openssh-client \
 software-properties-common \
-ca-certificates \
 apt-transport-https \
+ca-certificates \
 gnupg \
 lsb-release
 
-ok "Packages installed."
+ok "Base packages installed."
 
 ###############################################################################
-# Install yq
+# INSTALL YQ
 ###############################################################################
 
-if ! command -v yq >/dev/null
+if command -v yq >/dev/null
+
 then
+
+    ok "yq already installed."
+
+else
+
     info "Installing yq..."
 
     sudo wget -qO /usr/local/bin/yq \
@@ -126,80 +194,69 @@ https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
     sudo chmod +x /usr/local/bin/yq
 
     ok "yq installed."
-fi
-
-###############################################################################
-# Install Terraform
-###############################################################################
-
-if ! command -v terraform >/dev/null
-then
-
-    info "Installing Terraform ${TERRAFORM_VERSION}..."
-
-    wget -q https://releases.hashicorp.com/terraform/${TERRAFORM_VERSION}/terraform_${TERRAFORM_VERSION}_linux_amd64.zip
-
-    unzip terraform_${TERRAFORM_VERSION}_linux_amd64.zip
-
-    sudo mv terraform /usr/local/bin/
-
-    rm terraform_${TERRAFORM_VERSION}_linux_amd64.zip
-
-    ok "Terraform installed."
 
 fi
 
 ###############################################################################
-# Install Ansible
+# CREATE PLATFORM HOME
 ###############################################################################
 
-if ! command -v ansible >/dev/null
-then
+info "Creating platform workspace..."
 
-    info "Installing Ansible..."
+sudo mkdir -p "$PLATFORM_HOME"
 
-    python3 -m pip install --user --upgrade pip
-
-    python3 -m pip install --user \
-ansible \
-ansible-lint \
-jmespath \
-netaddr
-
-    ok "Ansible installed."
-
-fi
+sudo chown -R "$USER:$USER" "$PLATFORM_HOME"
 
 ###############################################################################
-# Install Google Cloud CLI
+# DIRECTORY STRUCTURE
 ###############################################################################
 
-if ! command -v gcloud >/dev/null
-then
+mkdir -p "$ANSIBLE_HOME"/{
+inventory,
+playbooks,
+roles,
+collections,
+group_vars,
+host_vars,
+templates,
+files
+}
 
-    info "Installing Google Cloud CLI..."
+mkdir -p "$TERRAFORM_HOME"/{
+gcp,
+aws,
+modules,
+environments
+}
 
-    echo "deb [signed-by=/usr/share/keyrings/cloud.google.gpg] http://packages.cloud.google.com/apt cloud-sdk main" | \
-sudo tee /etc/apt/sources.list.d/google-cloud-sdk.list >/dev/null
+mkdir -p "$CONFLUENT_HOME"
 
-    curl https://packages.cloud.google.com/apt/doc/apt-key.gpg | \
-sudo gpg --dearmor -o /usr/share/keyrings/cloud.google.gpg
+mkdir -p "$KUBERNETES_HOME"
 
-    sudo apt update
+mkdir -p "$MONITORING_HOME"
 
-    sudo apt install -y google-cloud-cli
+mkdir -p "$SCRIPT_HOME"
 
-    ok "Google Cloud CLI installed."
+mkdir -p "$DOC_HOME"
 
-fi
+mkdir -p "$DOWNLOAD_HOME"
+
+mkdir -p "$LOG_HOME"
+
+mkdir -p "$ARTIFACT_HOME"
+
+mkdir -p "$SSH_HOME"
+
+ok "Directory structure created."
 
 ###############################################################################
-# SSH Key
+# SSH KEY
 ###############################################################################
 
-mkdir -p "$SSH_DIR"
+mkdir -p ~/.ssh
 
-if [[ ! -f "$SSH_DIR/id_ed25519" ]]
+if [[ ! -f ~/.ssh/id_ed25519 ]]
+
 then
 
     info "Generating SSH key..."
@@ -207,11 +264,11 @@ then
     ssh-keygen \
 -t ed25519 \
 -a 100 \
--C "platform-lab" \
--f "$SSH_DIR/id_ed25519" \
+-f ~/.ssh/id_ed25519 \
+-C "platform@$(hostname)" \
 -N ""
 
-    ok "SSH Key generated."
+    ok "SSH key generated."
 
 else
 
@@ -220,75 +277,24 @@ else
 fi
 
 ###############################################################################
-# Directory Structure
+# BASH PROFILE
 ###############################################################################
 
-info "Creating Lab directory..."
+if ! grep -q PLATFORM_HOME ~/.bashrc
 
-mkdir -p "$LAB_HOME"
-
-mkdir -p "$LAB_HOME"/{
-terraform,
-ansible,
-inventory,
-scripts,
-docs,
-downloads,
-artifacts,
-logs,
-ssh
-}
-
-mkdir -p "$LAB_HOME/terraform/modules"
-
-mkdir -p "$LAB_HOME/ansible"/{
-inventory,
-group_vars,
-host_vars,
-roles,
-playbooks,
-collections,
-files,
-templates
-}
-
-ok "Directory structure created."
-
-###############################################################################
-# Clone cp-ansible
-###############################################################################
-
-if [[ ! -d "$CP_ANSIBLE_DIR" ]]
-then
-
-    info "Downloading cp-ansible..."
-
-    git clone \
-https://github.com/confluentinc/cp-ansible.git \
-"$CP_ANSIBLE_DIR"
-
-    ok "cp-ansible downloaded."
-
-else
-
-    warn "cp-ansible already exists."
-
-fi
-
-###############################################################################
-# Bash Profile
-###############################################################################
-
-if ! grep -q "LAB_HOME" ~/.bashrc
 then
 
 cat <<EOF >> ~/.bashrc
 
-#################################################
-# Platform Engineering Lab
-#################################################
+###############################################################################
+# Platform Engineering
+###############################################################################
 
-export LAB_HOME=$LAB_HOME
+export PLATFORM_HOME=/app/platform
+export ANSIBLE_HOME=/app/platform/ansible
+export TERRAFORM_HOME=/app/platform/terraform
+export CONFLUENT_HOME=/app/platform/confluent
+
 export PATH=\$HOME/.local/bin:\$PATH
 
 EOF
@@ -296,74 +302,60 @@ EOF
 fi
 
 ###############################################################################
-# Git Configuration
-###############################################################################
-
-warn "Configure Git if required."
-
-echo
-
-echo "git config --global user.name  \"Your Name\""
-echo "git config --global user.email \"your@email.com\""
-
-###############################################################################
-# Summary
+# SUMMARY
 ###############################################################################
 
 echo
-echo "==========================================="
-echo "Bootstrap Completed"
-echo "==========================================="
+echo "====================================================="
+echo " Platform Engineering Bootstrap v1.0"
+echo "====================================================="
 echo
 
-echo "Lab Home:"
-echo "$LAB_HOME"
+echo "Workspace"
+
+echo "-------------------------------------"
+
+echo "$PLATFORM_HOME"
 
 echo
 
-echo "Terraform:"
-terraform version || true
+echo "Git"
 
-echo
-
-echo "Git:"
 git --version
 
 echo
 
-echo "Python:"
+echo "Python"
+
 python3 --version
 
 echo
 
-echo "Ansible:"
-$HOME/.local/bin/ansible --version | head -1 || true
+echo "jq"
+
+jq --version
 
 echo
 
-echo "GCloud:"
-gcloud version | head -1 || true
+echo "yq"
+
+yq --version
 
 echo
 
-echo "Public SSH Key:"
+echo "SSH Public Key"
+
 cat ~/.ssh/id_ed25519.pub
 
 echo
 
 echo "Next Steps"
 
-echo "-------------------------------------------"
+echo "-------------------------------------"
 
-echo "1. source ~/.bashrc"
+echo "source ~/.bashrc"
 
-echo "2. gcloud auth login"
-
-echo "3. gcloud config set project <PROJECT_ID>"
-
-echo "4. cd ~/lab"
-
-echo "5. Start Terraform"
+echo "cd /app/platform"
 
 echo
 
