@@ -215,7 +215,7 @@ git-lfs \
 htop \
 iftop \
 iotop \
-tcpdump \
+tcpdump 
 
 ok "Base packages installed."
 
@@ -366,7 +366,9 @@ else
 
     info "Installing Terraform ${TERRAFORM_VERSION}..."
 
-    cd /tmp
+    TMP_DIR=$(mktemp -d)
+
+    cd "$TMP_DIR"
 
     wget -q https://releases.hashicorp.com/terraform/${TERRAFORM_VERSION}/terraform_${TERRAFORM_VERSION}_linux_amd64.zip
 
@@ -378,7 +380,7 @@ else
 
     sudo chmod +x /usr/local/bin/terraform
 
-    rm -f terraform_*.zip
+    rm -rf "$TMP_DIR"
 
     terraform version >/dev/null \
     || fail "Terraform installation failed."
@@ -435,6 +437,11 @@ else
     || fail "Ansible installation failed."
 
 fi
+
+ansible-galaxy collection install community.general
+
+ansible-galaxy collection install ansible.posix
+
 ###############################################################################
 # Install Google Cloud CLI
 ###############################################################################
@@ -473,7 +480,9 @@ fi
 # Clone cp-ansible
 ###############################################################################
 
-CP_ANSIBLE_HOME="${CONFLUENT_HOME}/cp-ansible"
+CONFLUENT_VERSION="8.2.x"
+
+CP_ANSIBLE_HOME="${CONFLUENT_HOME}/cp-ansible-${CONFLUENT_VERSION}"
 
 if [[ -d "$CP_ANSIBLE_HOME/.git" ]]
 
@@ -487,15 +496,25 @@ else
 
     info "Downloading cp-ansible..."
 
-    git clone \
---depth 1 \
--b "$CP_ANSIBLE_BRANCH" \
-https://github.com/confluentinc/cp-ansible.git \
-"$CP_ANSIBLE_HOME"
+git clone \
+    --depth 1 \
+    -b "$CP_ANSIBLE_BRANCH" \
+    https://github.com/confluentinc/cp-ansible.git \
+    "$CP_ANSIBLE_HOME"
 
 fi
 
+ln -sfn \
+"$CP_ANSIBLE_HOME" \
+"${CONFLUENT_HOME}/current"
+
  git config --global init.defaultBranch main
+
+ git config --global init.defaultBranch main
+
+ git config --global pull.rebase false
+
+ git config --global core.autocrlf input
 
 ###############################################################################
 # CLEANUP
