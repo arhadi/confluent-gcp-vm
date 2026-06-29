@@ -378,7 +378,7 @@ else
     wget -q --show-progress https://releases.hashicorp.com/terraform/${TERRAFORM_VERSION}/terraform_${TERRAFORM_VERSION}_linux_amd64.zip
 
     rm -f terraform
-    
+
     unzip -oq terraform_${TERRAFORM_VERSION}_linux_amd64.zip
 
     sudo mv terraform /usr/local/bin/
@@ -419,11 +419,11 @@ else
     pipx ensurepath
 
     command -v pipx >/dev/null || fail "pipx installation failed."
-    
+
     hash -r
-   
+
     export PATH="$HOME/.local/bin:$PATH"
-    
+
 fi
 
 ###############################################################################
@@ -517,7 +517,7 @@ ln -sfn \
 
 [[ -d "$CP_ANSIBLE_HOME" ]] || \
     fail "cp-ansible installation failed."
-    
+
 chmod -R u+rwX "$PLATFORM_HOME"
 
 git config --global init.defaultBranch main
