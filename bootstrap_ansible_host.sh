@@ -1,5 +1,5 @@
-# shellcheck shell=bash
 #!/usr/bin/env bash
+# shellcheck shell=bash
 ###############################################################################
 #
 # bootstrap_ansible_host.sh
