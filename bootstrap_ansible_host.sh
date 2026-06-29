@@ -29,7 +29,7 @@
 
 TERRAFORM_VERSION="1.13.0"
 CONFLUENT_VERSION="8.2.2"
-CP_ANSIBLE_BRANCH="${CONFLUENT_VERSION}"
+CP_ANSIBLE_BRANCH="8.2.x"
 
 ###############################################################################
 
@@ -61,6 +61,7 @@ LOG_HOME="${PLATFORM_HOME}/logs"
 ARTIFACT_HOME="${PLATFORM_HOME}/artifacts"
 
 SSH_HOME="${PLATFORM_HOME}/ssh"
+
 BOOTSTRAP_LOG="$HOME/bootstrap_ansible_host.log"
 ###############################################################################
 # COLOURS
@@ -136,7 +137,13 @@ ok "Sudo validated."
 # CREATE BOOTSTRAP LOG
 ###############################################################################
 
-sudo install -o root -g root -m 0644 /dev/null "$BOOTSTRAP_LOG"
+mkdir -p "$(dirname "$BOOTSTRAP_LOG")"
+
+touch "$BOOTSTRAP_LOG" \
+    || fail "Unable to create bootstrap log."
+
+chmod 600 "$BOOTSTRAP_LOG"
+
 
 ###############################################################################
 # CHECK OS
@@ -171,7 +178,7 @@ check_url() {
 
 check_url https://github.com
 check_url https://releases.hashicorp.com
-check_url https://packages.cloud.google.com
+check_url https://packages.cloud.google.com/apt/doc/apt-key.gpg
 
 ok "Internet connectivity verified."
 
@@ -272,23 +279,9 @@ sudo chown -R "$USER:$USER" "$PLATFORM_HOME"
 # DIRECTORY STRUCTURE
 ###############################################################################
 
-mkdir -p "$ANSIBLE_HOME"/{
-inventory,
-playbooks,
-roles,
-collections,
-group_vars,
-host_vars,
-templates,
-files
-}
+mkdir -p "$ANSIBLE_HOME"/{inventory,playbooks,roles,collections,group_vars,host_vars,templates,files}
 
-mkdir -p "$TERRAFORM_HOME"/{
-gcp,
-aws,
-modules,
-environments
-}
+mkdir -p "$TERRAFORM_HOME"/{gcp,aws,modules,environments}
 
 mkdir -p "$KUBERNETES_HOME"
 
@@ -306,11 +299,7 @@ mkdir -p "$ARTIFACT_HOME"
 
 mkdir -p "$SSH_HOME"
 
-mkdir -p "$CONFLUENT_HOME"/{
-playbooks,
-inventory,
-downloads
-}
+mkdir -p "$CONFLUENT_HOME"/{playbooks,inventory,downloads}
 
 ok "Directory structure created."
 
@@ -441,36 +430,25 @@ fi
 # Install Ansible
 ###############################################################################
 
-if command -v ansible >/dev/null
-
+if ! command -v ansible >/dev/null 2>&1
 then
-
-    ok "Ansible already installed."
-
-else
-
     info "Installing Ansible..."
 
-    pipx install ansible
+    sudo apt-get install -y ansible
 
-    pipx install ansible-lint
+    ansible --version >/dev/null \
+        || fail "Ansible installation failed."
+
+    ansible-playbook --version >/dev/null \
+        || fail "Ansible Playbook installation failed."
+
+    ansible-galaxy --version >/dev/null \
+        || fail "Ansible Galaxy installation failed."
 
     ok "Ansible installed."
 
-    ansible --version >/dev/null \
-    || fail "Ansible installation failed."
-
 fi
 
-ansible-galaxy collection list | grep -q "community.general" || \
-    ansible-galaxy collection install community.general
-
-ansible-galaxy collection list | grep -q "ansible.posix" || \
-    ansible-galaxy collection install ansible.posix
-
-ansible-galaxy --version >/dev/null \
-    || fail "ansible-galaxy not found."
-    
 ###############################################################################
 # Install Google Cloud CLI
 ###############################################################################
