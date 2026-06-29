@@ -124,14 +124,17 @@ fi
 # CHECK SUDO
 ###############################################################################
 
-sudo -v
+info "Validating sudo access..."
+
+sudo -v || fail "Sudo privilege required."
+
+ok "Sudo validated."
 
 ###############################################################################
 # CREATE BOOTSTARTP LOGO
 ###############################################################################
 
-sudo touch "$BOOTSTRAP_LOG"
-sudo chmod 644 "$BOOTSTRAP_LOG"
+sudo install -o root -g root -m 0644 /dev/null "$BOOTSTRAP_LOG"
 
 ###############################################################################
 # CHECK OS
@@ -154,6 +157,17 @@ fi
 ok "Ubuntu ${VERSION_ID} detected."
 
 ###############################################################################
+# Internet Connectivity
+###############################################################################
+
+info "Checking Internet connectivity..."
+
+curl -fsSL https://github.com >/dev/null \
+    || fail "Unable to reach github.com"
+
+ok "Internet connectivity verified."
+
+###############################################################################
 # UPDATE
 ###############################################################################
 
@@ -163,15 +177,13 @@ sudo apt-get update
 
 sudo DEBIAN_FRONTEND=noninteractive apt-get -y dist-upgrade
 
-curl -Is https://github.com >/dev/null || fail "Internet connection unavailable."
-
 ###############################################################################
 # INSTALL BASE PACKAGES
 ###############################################################################
 
 info "Installing packages..."
 
-sudo apt install -y \
+sudo apt-get install -y \
 git \
 curl \
 wget \
@@ -198,7 +210,12 @@ dnsutils \
 telnet \
 nmap \
 rsync \
-ncdu
+ncdu \
+git-lfs \
+htop \
+iftop \
+iotop \
+tcpdump \
 
 ok "Base packages installed."
 
@@ -363,7 +380,8 @@ else
 
     rm -f terraform_*.zip
 
-    terraform -install-autocomplete
+    terraform version >/dev/null \
+    || fail "Terraform installation failed."
 
     ok "Terraform installed."
 
@@ -386,6 +404,8 @@ else
     sudo apt-get install -y pipx
 
     pipx ensurepath
+
+    hash -r
    
     export PATH="$HOME/.local/bin:$PATH"
 
@@ -410,6 +430,9 @@ else
     pipx install ansible-lint
 
     ok "Ansible installed."
+
+    ansible --version >/dev/null \
+    || fail "Ansible installation failed."
 
 fi
 ###############################################################################
@@ -440,6 +463,9 @@ https://packages.cloud.google.com/apt/doc/apt-key.gpg \
     sudo apt-get install -y google-cloud-cli
 
     ok "Google Cloud CLI installed."
+
+    gcloud version >/dev/null \
+    || fail "Google Cloud CLI installation failed."
 
 fi
 
