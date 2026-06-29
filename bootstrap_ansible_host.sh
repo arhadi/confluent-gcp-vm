@@ -241,9 +241,10 @@ https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
 
     sudo chmod +x /usr/local/bin/yq
 
+    command -v yq >/dev/null || fail "yq installation failed."
+
     ok "yq installed."
 
-    command -v yq >/dev/null || fail "yq installation failed."
 fi
 
 ###############################################################################
@@ -372,7 +373,7 @@ else
 
     TMP_DIR=$(mktemp -d)
 
-    cd "$TMP_DIR"
+    cd "$TMP_DIR" || fail "Unable to access temporary directory."
 
     wget -q --show-progress https://releases.hashicorp.com/terraform/${TERRAFORM_VERSION}/terraform_${TERRAFORM_VERSION}_linux_amd64.zip
 
@@ -413,11 +414,11 @@ else
 
     pipx ensurepath
 
+    command -v pipx >/dev/null || fail "pipx installation failed."
+    
     hash -r
    
     export PATH="$HOME/.local/bin:$PATH"
-
-    command -v pipx >/dev/null || fail "pipx installation failed."
     
     python3 --version >/dev/null || fail "Python installation failed."
 fi
@@ -527,8 +528,7 @@ chmod -R u+rwX "$PLATFORM_HOME"
 git config --global init.defaultBranch main
 git config --global pull.rebase false
 git config --global core.autocrlf input
-
-git --version >/dev/null || fail "Git installation failed."
+git lfs install --skip-repo >/dev/null 2>&1 || true
 
 ###############################################################################
 # CLEANUP
