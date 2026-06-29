@@ -27,9 +27,11 @@
 ###############################################################################
 
 TERRAFORM_VERSION="1.13.0"
+CONFLUENT_VERSION="8.2.x"
 ANSIBLE_VERSION="latest"
 GCLOUD_VERSION="latest"
-CP_ANSIBLE_BRANCH="8.2.x"
+CP_ANSIBLE_BRANCH="${CONFLUENT_VERSION}"
+
 ###############################################################################
 
 set -euo pipefail
@@ -438,9 +440,11 @@ else
 
 fi
 
-ansible-galaxy collection install community.general
+ansible-galaxy collection list | grep -q "community.general" || \
+    ansible-galaxy collection install community.general
 
-ansible-galaxy collection install ansible.posix
+ansible-galaxy collection list | grep -q "ansible.posix" || \
+    ansible-galaxy collection install ansible.posix
 
 ###############################################################################
 # Install Google Cloud CLI
@@ -490,7 +494,9 @@ then
 
     info "Updating cp-ansible..."
 
-    git -C "$CP_ANSIBLE_HOME" pull
+    git -C "$CP_ANSIBLE_HOME" fetch --depth 1 origin
+
+    git -C "$CP_ANSIBLE_HOME" reset --hard "origin/${CP_ANSIBLE_BRANCH}"
 
 else
 
@@ -508,13 +514,11 @@ ln -sfn \
 "$CP_ANSIBLE_HOME" \
 "${CONFLUENT_HOME}/current"
 
- git config --global init.defaultBranch main
+chmod -R u+rwX "$PLATFORM_HOME"
 
- git config --global init.defaultBranch main
-
- git config --global pull.rebase false
-
- git config --global core.autocrlf input
+git config --global init.defaultBranch main
+git config --global pull.rebase false
+git config --global core.autocrlf input
 
 ###############################################################################
 # CLEANUP
@@ -529,27 +533,47 @@ sudo apt clean
 # SUMMARY
 ###############################################################################
 
-echo
-echo "====================================================="
-echo "Platform Engineering Bootstrap"
-echo "====================================================="
+==============================================================
+Platform Engineering Bootstrap v1.0
+==============================================================
 
-printf "%-20s %s\n" "Workspace" "$PLATFORM_HOME"
-printf "%-20s %s\n" "Git" "$(git --version)"
-printf "%-20s %s\n" "Terraform" "$(terraform version | head -1)"
-printf "%-20s %s\n" "Python" "$(python3 --version)"
-printf "%-20s %s\n" "Ansible" "$(ansible --version | head -1)"
-printf "%-20s %s\n" "gcloud" "$(gcloud version | head -1)"
-printf "%-20s %s\n" "jq" "$(jq --version)"
-printf "%-20s %s\n" "yq" "$(yq --version)"
+Platform Workspace
+------------------
+/app/platform
 
-echo
-echo "Platform workspace:"
-echo "  $PLATFORM_HOME"
+Installed Components
+--------------------
+✔ Git
+✔ Python
+✔ Terraform
+✔ Ansible
+✔ Google Cloud CLI
+✔ jq
+✔ yq
+✔ cp-ansible (8.2.x)
 
-echo
-echo "SSH public key:"
-cat ~/.ssh/id_ed25519.pub
+cp-ansible
+-----------
+/app/platform/confluent/current
+
+SSH Key
+-------
+~/.ssh/id_ed25519
+
+Bootstrap Log
+-------------
+/var/log/platform-bootstrap.log
+
+Next Steps
+----------
+1. source ~/.bashrc
+2. gcloud auth login
+3. gcloud config set project <PROJECT_ID>
+4. cd /app/platform
+
+==============================================================
+Bootstrap completed successfully.
+==============================================================
 
 echo
 ok "Bootstrap completed successfully."
