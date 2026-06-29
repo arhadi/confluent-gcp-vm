@@ -333,6 +333,8 @@ export PATH=\$HOME/.local/bin:\$PATH
 
 EOF
 
+fi
+
 ###############################################################################
 # Install Terraform
 ###############################################################################
@@ -437,8 +439,6 @@ https://packages.cloud.google.com/apt/doc/apt-key.gpg \
 
     sudo apt-get install -y google-cloud-cli
 
-    gcloud components update
-
     ok "Google Cloud CLI installed."
 
 fi
@@ -461,25 +461,24 @@ else
 
     info "Downloading cp-ansible..."
 
-    git clone -b "$CP_ANSIBLE_BRANCH" https://github.com/confluentinc/cp-ansible.git "$CP_ANSIBLE_HOME"
-
-    git config --global init.defaultBranch main
-
-fi
-###############################################################################
-# Platform Engineering
-###############################################################################
-
-export PLATFORM_HOME=/app/platform
-export ANSIBLE_HOME=/app/platform/ansible
-export TERRAFORM_HOME=/app/platform/terraform
-export CONFLUENT_HOME=/app/platform/confluent
-
-export PATH=\$HOME/.local/bin:\$PATH
-
-EOF
+    git clone \
+--depth 1 \
+-b "$CP_ANSIBLE_BRANCH" \
+https://github.com/confluentinc/cp-ansible.git \
+"$CP_ANSIBLE_HOME"
 
 fi
+
+ git config --global init.defaultBranch main
+
+###############################################################################
+# CLEANUP
+###############################################################################
+rm -rf /tmp/terraform*
+
+sudo apt autoremove -y
+
+sudo apt clean
 
 ###############################################################################
 # SUMMARY
